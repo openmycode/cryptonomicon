@@ -63,7 +63,7 @@
 								CHD
 							</span>
 						</div> -->
-						<div v-if="checkedTicker" class="text-sm text-red-600">Такой тикер уже добавлен</div>
+						<div v-if="alreadyTicker" class="text-sm text-red-600">Такой тикер уже добавлен</div>
 					</div>
 				</div>
 				<button
@@ -183,6 +183,7 @@ export default {
 					price: '-'
 				}
 			})
+			this.tickers.forEach(t => this.subscribeToUpdate(t.name))
 		}
 	},
 
@@ -197,6 +198,7 @@ export default {
 	data() {
 		return {
 			spinner: true,
+			alreadyTicker: false,
 
 			ticker: '',
 			tickers: [],
@@ -208,9 +210,11 @@ export default {
 	// ================================================================== METHODS
 	methods: {
 		add() {
-			if (this.ticker && !this.checkedTicker) {
+			this.checkTicker()
+			if (this.ticker && !this.alreadyTicker) {
 				const currentTicker = { name: this.ticker.toUpperCase(), price: '-' }
 				this.tickers = [...this.tickers, currentTicker]
+				this.subscribeToUpdate(currentTicker.name)
 				this.ticker = ''
 			}
 		},
@@ -218,20 +222,35 @@ export default {
 		handleDelete(tickerToRemove) {
 			this.tickers = this.tickers.filter(ticker => ticker.name !== tickerToRemove.name)
 			if (tickerToRemove === this.selectedTicker) this.selectedTicker = null
+		},
+
+		checkTicker() {
+			const checkedTicker = this.tickers.find(t => t.name === this.ticker.toUpperCase())
+			if (checkedTicker) this.alreadyTicker = true
+		},
+
+		subscribeToUpdate(tickerName) {
+			setInterval(async () => {
+				const request = await fetch(
+					`https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=d8bf400f12900bafbf53341edd2b5a9a1627c03ec06e68e21c1a52865392a36e`
+				)
+				const data = await request.json()
+				this.tickers.find(t => t.name === tickerName).price =
+					data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+			}, 3000)
 		}
 	},
 
 	// ================================================================== COMPUTED
-	computed: {
-		checkedTicker() {
-			return this.tickers.find(t => t.name === this.ticker.toUpperCase())
-		}
-	},
+	computed: {},
 
 	// ================================================================== WATCH
 	watch: {
 		tickers() {
 			localStorage.setItem('cryptonomiconList', JSON.stringify(this.tickers))
+		},
+		ticker() {
+			this.alreadyTicker = null
 		}
 	}
 }
