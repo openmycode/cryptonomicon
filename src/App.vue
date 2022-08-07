@@ -91,6 +91,7 @@
 				<hr class="w-full border-t border-gray-600 my-4" />
 				<p for="wallet" class="block text-sm font-medium text-gray-700">Filter</p>
 				<input
+					v-model="filter"
 					type="text"
 					name="wallet"
 					id="wallet"
@@ -98,22 +99,42 @@
 					placeholder="Filter condition"
 				/>
 				<button
-					class="mr-2 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+					@click="this.page -= 1"
+					:disabled="page === 1"
+					:class="{
+						'my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500':
+							page > 1,
+						'opacity-50 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 transition-colors duration-300 ':
+							page === 1
+					}"
+					type="button"
+					class="mr-2"
 				>
 					Back
 				</button>
 				<button
-					class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+					@click="this.page += 1"
+					:disabled="page === totalPages"
+					:class="{
+						'my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500':
+							page < totalPages,
+						'opacity-50 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 transition-colors duration-300 ':
+							page === totalPages
+					}"
+					type="button"
 				>
 					Next
 				</button>
+				<span v-if="paginatedTickers.length" class="ml-4 text-gray-700">
+					{{ page }} / {{ totalPages }}
+				</span>
 			</section>
 
 			<template v-if="tickers.length">
 				<hr class="w-full border-t border-gray-600 my-4" />
 				<dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
 					<div
-						v-for="t in tickers"
+						v-for="t in paginatedTickers"
 						:key="t"
 						@click="selectTicker(t)"
 						:class="{
@@ -222,15 +243,23 @@ export default {
 	// ================================================================== DATA
 	data() {
 		return {
-			spinner: true,
-			alreadyTicker: false,
-
 			ticker: '',
+			filter: '',
 
 			tickers: [],
 			graph: [],
 
-			selectedTicker: null
+			page: 1,
+
+			selectedTicker: null,
+
+			spinner: true,
+			alreadyTicker: false,
+
+			activeButtonClasses:
+				'my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500',
+			disabledButtonClasses:
+				'my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 transition-colors duration-300'
 		}
 	},
 
@@ -277,19 +306,28 @@ export default {
 
 	// ================================================================== COMPUTED
 	computed: {
-		minGraphValue() {
-			return Math.min(...this.graph)
-		},
-		maxGraphValue() {
-			return Math.max(...this.graph)
-		},
 		normalizedGraph() {
-			if (this.minGraphValue === this.maxGraphValue) {
+			const minValue = Math.min(...this.graph)
+			const maxValue = Math.max(...this.graph)
+			if (minValue === maxValue) {
 				return this.graph.map(() => 50)
 			}
-			return this.graph.map(
-				value => (5 + (value - this.minGraphValue) * 95) / (this.maxGraphValue - this.minGraphValue)
-			)
+			return this.graph.map(value => (5 + (value - minValue) * 95) / (maxValue - minValue))
+		},
+		totalPages() {
+			return Math.ceil(this.filteredTickers.length / 6)
+		},
+		startIndex() {
+			return (this.page - 1) * 6
+		},
+		endIndex() {
+			return this.page * 6
+		},
+		paginatedTickers() {
+			return this.filteredTickers.slice(this.startIndex, this.endIndex)
+		},
+		filteredTickers() {
+			return this.tickers.filter(t => t.name.includes(this.filter.toUpperCase()))
 		}
 	},
 
@@ -297,9 +335,13 @@ export default {
 	watch: {
 		tickers() {
 			localStorage.setItem('cryptonomiconList', JSON.stringify(this.tickers))
+			this.page = this.totalPages
 		},
 		ticker() {
 			this.alreadyTicker = null
+		},
+		filter() {
+			this.page = 1
 		}
 	}
 }
