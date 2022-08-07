@@ -231,6 +231,11 @@ export default {
 			})
 			this.tickers.forEach(t => this.subscribeToUpdate(t.name))
 		}
+
+		const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
+		if (windowData.filter) this.filter = windowData.filter
+		if (windowData.page) this.page = +windowData.page
+		console.log(this.page, this.totalPages)
 	},
 
 	// ================================================================== MOUNTED
@@ -292,7 +297,7 @@ export default {
 				)
 				const data = await request.json()
 				this.tickers.find(t => t.name === tickerName).price =
-					data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+					data.USD > 1 ? data.USD.toFixed(2) : data.USD?.toPrecision(2)
 				if (this.selectedTicker?.name === tickerName) {
 					this.graph.push(this.selectedTicker.price)
 				}
@@ -342,6 +347,19 @@ export default {
 		},
 		filter() {
 			this.page = 1
+
+			window.history.pushState(
+				null,
+				document.title,
+				`${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+			)
+		},
+		page() {
+			window.history.pushState(
+				null,
+				document.title,
+				`${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+			)
 		}
 	}
 }
