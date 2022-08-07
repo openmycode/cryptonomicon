@@ -94,7 +94,7 @@
 					<div
 						v-for="t in tickers"
 						:key="t"
-						@click="selectedTicker = t"
+						@click="selectTicker(t)"
 						:class="{
 							'border-4': t === selectedTicker
 						}"
@@ -136,10 +136,14 @@
 					{{ selectedTicker.name }}
 				</h3>
 				<div class="flex items-end border-gray-600 border-b border-l h-64">
-					<div class="bg-purple-800 border w-10 h-24"></div>
-					<div class="bg-purple-800 border w-10 h-32"></div>
-					<div class="bg-purple-800 border w-10 h-48"></div>
-					<div class="bg-purple-800 border w-10 h-16"></div>
+					<div
+						v-for="(bar, idx) in normalizedGraph"
+						:key="idx"
+						:style="{
+							height: `${bar}%`
+						}"
+						class="bg-purple-800 border w-10"
+					></div>
 				</div>
 				<button @click="selectedTicker = null" type="button" class="absolute top-0 right-0">
 					<svg
@@ -201,7 +205,9 @@ export default {
 			alreadyTicker: false,
 
 			ticker: '',
+
 			tickers: [],
+			graph: [],
 
 			selectedTicker: null
 		}
@@ -237,12 +243,34 @@ export default {
 				const data = await request.json()
 				this.tickers.find(t => t.name === tickerName).price =
 					data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+				if (this.selectedTicker?.name === tickerName) {
+					this.graph.push(this.selectedTicker.price)
+				}
 			}, 3000)
+		},
+		selectTicker(t) {
+			this.selectedTicker = t
+			this.graph = []
 		}
 	},
 
 	// ================================================================== COMPUTED
-	computed: {},
+	computed: {
+		minGraphValue() {
+			return Math.min(...this.graph)
+		},
+		maxGraphValue() {
+			return Math.max(...this.graph)
+		},
+		normalizedGraph() {
+			if (this.minGraphValue === this.maxGraphValue) {
+				return this.graph.map(() => 50)
+			}
+			return this.graph.map(
+				value => (5 + (value - this.minGraphValue) * 95) / (this.maxGraphValue - this.minGraphValue)
+			)
+		}
+	},
 
 	// ================================================================== WATCH
 	watch: {
