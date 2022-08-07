@@ -119,7 +119,7 @@
 						'my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500':
 							page < totalPages,
 						'opacity-50 my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 transition-colors duration-300 ':
-							page === totalPages
+							page === totalPagesшп
 					}"
 					type="button"
 				>
@@ -216,6 +216,20 @@
 </template>
 
 <script>
+// [x] 6. Наличие состоянии ЗАВИСИМЫХ ДАННЫХ | Критичность: 5+
+// [ ] 4. Запросы напрямую внутри компонента (???) | Критичность: 5
+// [ ] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
+// [ ] 5. Обработка ошибок API | Критичность: 5
+// [ ] 3. Количество запросов | Критичность: 4
+// [ ] 8. При удалении тикера не изменяется localStorage | Критичность: 4
+// [ ] 1. Одинаковый код в watch | Критичность: 3
+// [ ] 9. localStorage и анонимные вкладки | Критичность: 3
+// [ ] 7. График ужасно выглядит если будет много цен | Критичность: 2
+// [ ] 10. Магические строки и числа (URL, 5000 миллисекунд задержки, ключ локал стораджа, количество на странице) |  Критичность: 1
+// Параллельно
+// [x] График сломан если везде одинаковые значения
+// [x] При удалении тикера остается выбор
+
 export default {
 	name: 'App',
 
@@ -235,7 +249,6 @@ export default {
 		const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
 		if (windowData.filter) this.filter = windowData.filter
 		if (windowData.page) this.page = +windowData.page
-		console.log(this.page, this.totalPages)
 	},
 
 	// ================================================================== MOUNTED
@@ -248,6 +261,8 @@ export default {
 	// ================================================================== DATA
 	data() {
 		return {
+			coinListURL: 'https://min-api.cryptocompare.com/data/all/coinlist?summary=true',
+
 			ticker: '',
 			filter: '',
 
@@ -333,6 +348,12 @@ export default {
 		},
 		filteredTickers() {
 			return this.tickers.filter(t => t.name.includes(this.filter.toUpperCase()))
+		},
+		pageStateOptions() {
+			return {
+				page: this.page,
+				filter: this.filter
+			}
 		}
 	},
 
@@ -347,18 +368,12 @@ export default {
 		},
 		filter() {
 			this.page = 1
-
-			window.history.pushState(
-				null,
-				document.title,
-				`${window.location.pathname}?filter=${this.filter}&page=${this.page}`
-			)
 		},
-		page() {
+		pageStateOptions(value) {
 			window.history.pushState(
 				null,
 				document.title,
-				`${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+				`${window.location.pathname}?filter=${value.filter}&page=${value.page}`
 			)
 		}
 	}
